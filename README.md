@@ -30,7 +30,7 @@ Make sure you have Node.js (v18+) installed on your machine.
 
 ### 2. Clone the Repository
 ```bash
-git clone https://github.com/your-username/ideas-garage.git
+git clone [https://github.com/your-username/ideas-garage.git](https://github.com/a7med-Talaat/Ideas-garage)
 cd ideas-garage
 ```
 
