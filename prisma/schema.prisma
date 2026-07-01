@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  ideas         Idea[]
+  categories    Category[]
+  tags          Tag[]
+  comments      Comment[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  color       String   @default("#4f8ef7")
+  icon        String   @default("Folder")
+  description String?
+  aiGenerated Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ideas       Idea[]
+  
+  @@unique([name, userId])
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String
+  color     String     @default("#4f8ef7")
+  createdAt DateTime   @default(now())
+  
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ideas     IdeaTag[]
+  
+  @@unique([name, userId])
+}
+
+model Idea {
+  id              String      @id @default(cuid())
+  title           String
+  description     String      @default("")
+  richContent     String?     // JSON TipTap content
+  status          String      @default("ACTIVE")  // ACTIVE | DRAFT | COMPLETED | ARCHIVED
+  priority        String      @default("MEDIUM")  // LOW | MEDIUM | HIGH | URGENT
+  isFavorite      Boolean     @default(false)
+  complexity      Int?        // 1-10 AI score
+  aiKeywords      String?     // JSON array of AI-generated keywords
+  aiSummary       String?     // Short AI summary
+  coverColor      String?     // hex color for car
+  emoji           String?     // optional emoji icon
+  completedAt     DateTime?
+  archivedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId      String?
+  category        Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  
+  tags            IdeaTag[]
+  comments        Comment[]
+  aiInsights      AIInsight[]
+  versions        VersionHistory[]
+  
+  // idea connections (many-to-many self-referential)
+  linksFrom       IdeaLink[]  @relation("SourceIdea")
+  linksTo         IdeaLink[]  @relation("TargetIdea")
+  
+  @@index([userId, status])
+  @@index([userId, categoryId])
+  @@index([createdAt])
+}
+
+model IdeaTag {
+  ideaId    String
+  tagId     String
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@id([ideaId, tagId])
+}
+
+model IdeaLink {
+  id               String   @id @default(cuid())
+  sourceId         String
+  targetId         String
+  relationshipType String   @default("RELATED")  // RELATED | MERGES | SPAWNS | CONFLICTS
+  aiExplained      String?  // AI explanation of why they're connected
+  strength         Float    @default(0.5)  // 0-1 connection strength
+  createdAt        DateTime @default(now())
+  
+  source           Idea     @relation("SourceIdea", fields: [sourceId], references: [id], onDelete: Cascade)
+  target           Idea     @relation("TargetIdea", fields: [targetId], references: [id], onDelete: Cascade)
+  
+  @@unique([sourceId, targetId])
+}
+
+model AIInsight {
+  id          String   @id @default(cuid())
+  type        String   // EXPAND | RISK | MONETIZE | ROADMAP | SUMMARY | ACTION_PLAN | CONNECTIONS
+  content     String   // JSON structured content
+  model       String   @default("gemini")
+  createdAt   DateTime @default(now())
+  
+  ideaId      String
+  idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  
+  @@index([ideaId, type])
+}
+
+model VersionHistory {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  richContent String?
+  createdAt   DateTime @default(now())
+  
+  ideaId      String
+  idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  
+  @@index([ideaId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  ideaId    String
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
